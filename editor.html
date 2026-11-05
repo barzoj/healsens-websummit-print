@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Healsens A5 — редактор для печати</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: A5 portrait; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: #E8E6E3;
+      color: #040517;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* —— editor chrome (hidden on print) —— */
+    .ui {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 22px;
+      background: #040517;
+      color: #EEF1F7;
+    }
+    .ui .brand { font-weight: 700; letter-spacing: -0.03em; }
+    .ui .brand span { color: #7CFC00; }
+    .ui .hint { font-size: 12px; color: #A6ADBD; max-width: 46em; line-height: 1.35; }
+    .ui-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .ui button, .ui a.btn {
+      font: 700 13px Inter, system-ui, sans-serif;
+      border: 0; border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .ui .print { background: #7CFC00; color: #040517; }
+    .ui .ghost { background: #1C2033; color: #EEF1F7; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: calc(100vh - 72px);
+    }
+    .form {
+      background: #F7F6F5;
+      border-right: 1px solid #D9D6D2;
+      padding: 18px 16px 40px;
+      overflow: auto;
+      max-height: calc(100vh - 72px);
+    }
+    .form h2 {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #4D5468; margin: 18px 0 8px;
+    }
+    .form h2:first-child { margin-top: 0; }
+    label { display: block; font-size: 11px; font-weight: 600; color: #4D5468; margin: 8px 0 4px; }
+    input, textarea {
+      width: 100%;
+      font: 13px/1.35 Inter, system-ui, sans-serif;
+      color: #040517;
+      background: #fff;
+      border: 1px solid #D0CCC6;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    textarea { min-height: 64px; resize: vertical; }
+    textarea.tall { min-height: 88px; }
+    .note {
+      font-size: 12px; color: #4D5468; line-height: 1.4;
+      background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    }
+
+    .preview-wrap {
+      padding: 28px;
+      overflow: auto;
+      max-height: calc(100vh - 72px);
+    }
+    .board {
+      display: flex;
+      gap: 22px;
+      transform-origin: top left;
+      transform: scale(0.72);
+      width: calc(148mm * 2 + 22px);
+    }
+
+    /* —— shared A5 page —— */
+    .page {
+      width: 148mm; height: 210mm;
+      flex-shrink: 0;
+      background: #F7F6F5;
+      color: #040517;
+      padding: 9mm 10mm 8mm;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 28px rgba(4,5,23,0.12);
+    }
+    .page.front {
+      background:
+        radial-gradient(70% 40% at 90% 8%, rgba(18,255,247,0.35), transparent 60%),
+        radial-gradient(60% 35% at 10% 70%, rgba(179,255,171,0.4), transparent 60%),
+        #F7F6F5;
+    }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    .logo { height: 7mm; width: auto; align-self: flex-start; }
+    .page.back .logo { height: 6.5mm; }
+    .tag {
+      font-size: 6.5pt; letter-spacing: 0.14em; text-transform: uppercase;
+      font-weight: 600; color: #4D5468;
+    }
+    .page h1 {
+      margin-top: 6mm; font-size: 18pt; line-height: 1.12;
+      font-weight: 700; letter-spacing: -0.035em;
+    }
+    .page.back h1 { margin-top: 5mm; font-size: 15pt; }
+    .lead, .story {
+      margin-top: 3mm; font-size: 8.5pt; line-height: 1.4; color: #4D5468; max-width: 122mm;
+    }
+    .story { font-size: 8pt; line-height: 1.38; }
+    .phones { display: block; width: 100%; height: 48mm; object-fit: contain; margin: 3mm 0 1mm; }
+    .doors { display: flex; flex-direction: column; gap: 3mm; }
+    .door {
+      background: #fff; border-radius: 4mm; padding: 3.8mm 4.5mm;
+      box-shadow: 0 1px 2px rgba(4,5,23,0.04), 0 6px 16px rgba(4,5,23,0.05);
+      border-left: 1.6mm solid #7CFC00;
+    }
+    .door.blue { border-left-color: #64B5F6; }
+    .door.peach { border-left-color: #FFC1A7; }
+    .who { font-size: 6.5pt; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: #3F7D00; }
+    .door.blue .who { color: #2F6FA8; }
+    .door.peach .who { color: #B85A2A; }
+    .door h2 { margin-top: 0.8mm; font-size: 10pt; font-weight: 700; letter-spacing: -0.02em; }
+    .door p { margin-top: 0.8mm; font-size: 7.5pt; line-height: 1.32; color: #4D5468; }
+    .bottom {
+      margin-top: auto; display: flex; align-items: center; gap: 4.5mm;
+      background: #fff; border-radius: 4mm; padding: 3.5mm 4mm;
+      box-shadow: 0 1px 2px rgba(4,5,23,0.04), 0 6px 16px rgba(4,5,23,0.05);
+    }
+    .qr { width: 22mm; height: 22mm; border-radius: 2mm; background: #fff; }
+    .cta {
+      display: inline-block; background: #040517; color: #7CFC00;
+      font-size: 7pt; font-weight: 700; letter-spacing: 0.04em;
+      padding: 1.8mm 3.5mm; border-radius: 10mm; margin-bottom: 1.5mm;
+    }
+    .bottom-copy { font-size: 7pt; line-height: 1.35; color: #4D5468; }
+
+    .pair { margin-top: 4mm; display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+    .man { background: #fff; border-radius: 4mm; padding: 3.5mm; box-shadow: 0 1px 2px rgba(4,5,23,0.04), 0 6px 16px rgba(4,5,23,0.05); }
+    .man.a { background: #E7F7E3; }
+    .man.b { background: #FFE8DC; }
+    .lbl { font-size: 6pt; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: #3F7D00; }
+    .man.b .lbl { color: #B85A2A; }
+    .man h2 { font-size: 9pt; margin-top: 1mm; font-weight: 700; }
+    .man p { margin-top: 1.2mm; font-size: 7.2pt; line-height: 1.32; color: #4D5468; }
+    .line { margin-top: 4mm; font-size: 8.5pt; font-weight: 700; letter-spacing: -0.02em; }
+    .cols { margin-top: 3.5mm; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2.5mm; flex: 1; }
+    .col { background: #fff; border-radius: 4mm; padding: 3.5mm 3.2mm; box-shadow: 0 1px 2px rgba(4,5,23,0.04), 0 6px 16px rgba(4,5,23,0.05); }
+    .chip {
+      display: inline-block; font-size: 5.8pt; letter-spacing: 0.1em; text-transform: uppercase;
+      font-weight: 700; padding: 0.8mm 1.8mm; border-radius: 8mm;
+    }
+    .mint .chip { background: #BEFFA7; color: #2F6B00; }
+    .sky .chip { background: #B6D4EA; color: #2F6FA8; }
+    .peach .chip { background: #FFC1A7; color: #8A3B16; }
+    .col h3 { margin-top: 2mm; font-size: 8pt; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+    .col ul { margin-top: 2mm; padding-left: 3.2mm; font-size: 6.6pt; line-height: 1.38; color: #4D5468; }
+    .ask { margin-top: 2.2mm; font-size: 6.4pt; font-weight: 700; }
+    footer.sheet {
+      margin-top: 4mm; display: flex; justify-content: space-between; align-items: flex-end; gap: 4mm;
+    }
+    .hours { font-size: 7pt; line-height: 1.4; color: #4D5468; }
+    .hours strong { color: #040517; font-size: 7.5pt; }
+    .qrs { display: flex; gap: 3.5mm; text-align: center; }
+    .qrs figure { width: 20mm; margin: 0; }
+    .qrs img {
+      width: 20mm; height: 20mm; background: #fff; border-radius: 2mm; padding: 1mm;
+      box-shadow: 0 1px 2px rgba(4,5,23,0.04);
+    }
+    .qrs figcaption { margin-top: 1mm; font-size: 5.4pt; color: #4D5468; font-weight: 600; }
+
+    @media print {
+      .ui, .form { display: none !important; }
+      .workspace { display: block; }
+      .preview-wrap { padding: 0; overflow: visible; max-height: none; }
+      .board { transform: none; gap: 0; width: auto; display: block; }
+      .page {
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+      .page:last-child { page-break-after: auto; break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="ui">
+    <div>
+      <div class="brand">healsens <span>A5 editor</span></div>
+      <div class="hint">Правишь тексты и ссылки QR слева — макет обновляется сразу. Потом «Печать PDF»: принтер «Сохранить как PDF», бумага A5, поля Нет, фон включён. Этот PDF и отдаёшь в типографию.</div>
+    </div>
+    <div class="ui-actions">
+      <button class="ghost" type="button" id="resetBtn">Сбросить</button>
+      <button class="print" type="button" id="printBtn">Печать PDF</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="form" id="form"></aside>
+    <div class="preview-wrap">
+      <div class="board">
+        <!-- FRONT -->
+        <article class="page front">
+          <div class="top">
+            <img class="logo" src="assets/logo-combo.png" alt="Healsens" />
+            <div class="tag" data-k="tag"></div>
+          </div>
+          <h1><span data-k="h1a"></span><br><span data-k="h1b"></span></h1>
+          <p class="lead" data-k="lead"></p>
+          <img class="phones" src="assets/phones.png" alt="Healsens app" />
+          <div class="doors">
+            <div class="door">
+              <div class="who" data-k="d1who"></div>
+              <h2 data-k="d1title"></h2>
+              <p data-k="d1body"></p>
+            </div>
+            <div class="door blue">
+              <div class="who" data-k="d2who"></div>
+              <h2 data-k="d2title"></h2>
+              <p data-k="d2body"></p>
+            </div>
+            <div class="door peach">
+              <div class="who" data-k="d3who"></div>
+              <h2 data-k="d3title"></h2>
+              <p data-k="d3body"></p>
+            </div>
+          </div>
+          <div class="bottom">
+            <img class="qr" id="qrFront" alt="QR" />
+            <div>
+              <div class="cta" data-k="cta"></div>
+              <div class="bottom-copy">
+                <span data-k="footUrl"></span><br />
+                <span data-k="footMeta"></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- BACK -->
+        <article class="page back">
+          <img class="logo" src="assets/logo-combo.png" alt="Healsens" />
+          <h1 data-k="bh1"></h1>
+          <p class="story" data-k="story"></p>
+          <div class="pair">
+            <div class="man a">
+              <div class="lbl" data-k="aLbl"></div>
+              <h2 data-k="aTitle"></h2>
+              <p data-k="aBody"></p>
+            </div>
+            <div class="man b">
+              <div class="lbl" data-k="bLbl"></div>
+              <h2 data-k="bTitle"></h2>
+              <p data-k="bBody"></p>
+            </div>
+          </div>
+          <p class="line" data-k="line"></p>
+          <div class="cols">
+            <div class="col mint">
+              <span class="chip" data-k="c1chip"></span>
+              <h3 data-k="c1title"></h3>
+              <ul id="ul-c1"></ul>
+              <p class="ask" data-k="c1ask"></p>
+            </div>
+            <div class="col sky">
+              <span class="chip" data-k="c2chip"></span>
+              <h3 data-k="c2title"></h3>
+              <ul id="ul-c2"></ul>
+              <p class="ask" data-k="c2ask"></p>
+            </div>
+            <div class="col peach">
+              <span class="chip" data-k="c3chip"></span>
+              <h3 data-k="c3title"></h3>
+              <ul id="ul-c3"></ul>
+              <p class="ask" data-k="c3ask"></p>
+            </div>
+          </div>
+          <footer class="sheet">
+            <div class="hours">
+              <strong data-k="hoursTitle"></strong><br />
+              <span data-k="hoursWhen"></span><br />
+              <span data-k="hoursLegal"></span>
+            </div>
+            <div class="qrs">
+              <figure>
+                <img id="qrIntel" alt="Platform QR" />
+                <figcaption data-k="qr1cap"></figcaption>
+              </figure>
+              <figure>
+                <img id="qrAbout" alt="About QR" />
+                <figcaption data-k="qr2cap"></figcaption>
+              </figure>
+            </div>
+          </footer>
+        </article>
+      </div>
+    </div>
+  </div>
+
+<script src="assets/qrcode-generator.min.js"></script>
+<script>
+const DEFAULTS = {
+  tag: "Web Summit 2026",
+  h1a: "One prevention engine.",
+  h1b: "Three ways in.",
+  lead: "Healsens turns health data into a personalized screening plan — then keeps it current as new risks, results and lifestyle signals appear. Same engine: a consumer app and a healthcare intelligence layer.",
+  d1who: "01 · Employers",
+  d1title: "Ready product for employees",
+  d1body: "Corporate wellness that is not a generic checklist. Personal checkup plans, biomarkers, biological age, and follow-up.",
+  d2who: "02 · Providers & platforms",
+  d2title: "License the intelligence",
+  d2body: "Risk view, missing-data detection, screening recommendations, result interpretation — without taking the whole consumer app.",
+  d3who: "03 · Labs & diagnostics",
+  d3title: "A companion to every test",
+  d3body: "Channel or joint product: results that come with a longitudinal view, and a reason to test again.",
+  cta: "Scan for Health Intelligence",
+  footUrl: "platform.healsens.com/health-data-analytics",
+  footMeta: "Live demo · Pavilion 1 · E150 · contact@healsens.com",
+  qrFront: "https://platform.healsens.com/health-data-analytics",
+
+  bh1: "Same age. Different screening needs.",
+  story: "Two men, both 45. One has no family history of prostate cancer. The other has a father who had it. To a system that looks only at age, they are almost the same. For prevention, they are not. The second man may need screening earlier — and for both, PSA results decide when to screen again. Prevention is not a checklist. It is a plan that evolves with the person.",
+  aLbl: "Person A · 45",
+  aTitle: "No family history",
+  aBody: "Standard interval. Next step depends on his own results, not a generic age table.",
+  bLbl: "Person B · 45",
+  bTitle: "Father had prostate cancer",
+  bBody: "May need screening earlier. The plan updates as new risk factors and results appear.",
+  line: "This logic already runs across 23 chronic-disease and risk areas. Same engine, three offers:",
+  c1chip: "Employers",
+  c1title: "Employee wellness, ready to pilot",
+  c1list: "Personal checkup plans\nBiomarkers & biological age\nLifestyle, sleep, stress\nWorking consumer app",
+  c1ask: "Ask: 30-min pilot call",
+  c2chip: "EHR · clinics",
+  c2title: "Health Intelligence Infrastructure",
+  c2list: "Risk models, explainable scores\nWhat is missing in the record\nScreening roadmap & intervals\nAPIs — license the layer",
+  c2ask: "Ask: technical intro",
+  c3chip: "Labs",
+  c3title: "Channel or joint product",
+  c3list: "Companion to lab results\nStructured intake of reports\nLongitudinal follow-up\nA reason to test again",
+  c3ask: "Ask: partnership talk",
+  hoursTitle: "Live demo · Pavilion 1 · E150",
+  hoursWhen: "Tue 10 Nov 11:00–12:00 · Wed 11 Nov 12:00–13:00 · Thu 12 Nov 12:00–13:00",
+  hoursLegal: "contact@healsens.com · Healsens B.V., Hoofddorp",
+  qrIntel: "https://platform.healsens.com/health-data-analytics",
+  qrAbout: "https://healsens.com/about-us/",
+  qr1cap: "Intelligence",
+  qr2cap: "App / about"
+};
+
+const FIELDS = [
+  ["QR-коды — вставь нужные ссылки", null],
+  ["qrFront", "QR на лицевой стороне", "url"],
+  ["qrIntel", "QR «Intelligence» на обороте", "url"],
+  ["qrAbout", "QR «App / about» на обороте", "url"],
+  ["Лицевая сторона", null],
+  ["tag", "Верхняя подпись"],
+  ["h1a", "Заголовок, строка 1"],
+  ["h1b", "Заголовок, строка 2"],
+  ["lead", "Лид", "area"],
+  ["d1who", "01 · кто"],
+  ["d1title", "01 · заголовок"],
+  ["d1body", "01 · текст", "area"],
+  ["d2who", "02 · кто"],
+  ["d2title", "02 · заголовок"],
+  ["d2body", "02 · текст", "area"],
+  ["d3who", "03 · кто"],
+  ["d3title", "03 · заголовок"],
+  ["d3body", "03 · текст", "area"],
+  ["cta", "Кнопка у QR"],
+  ["footUrl", "Подпись ссылки"],
+  ["footMeta", "Демо / контакт"],
+  ["Оборот", null],
+  ["bh1", "Заголовок оборота"],
+  ["story", "История двух мужчин", "tall"],
+  ["aLbl", "Person A · метка"],
+  ["aTitle", "Person A · заголовок"],
+  ["aBody", "Person A · текст", "area"],
+  ["bLbl", "Person B · метка"],
+  ["bTitle", "Person B · заголовок"],
+  ["bBody", "Person B · текст", "area"],
+  ["line", "Строка про 23 области", "area"],
+  ["c1chip", "Колонка 1 · чип"],
+  ["c1title", "Колонка 1 · заголовок"],
+  ["c1list", "Колонка 1 · список (по строке)", "area"],
+  ["c1ask", "Колонка 1 · ask"],
+  ["c2chip", "Колонка 2 · чип"],
+  ["c2title", "Колонка 2 · заголовок"],
+  ["c2list", "Колонка 2 · список (по строке)", "area"],
+  ["c2ask", "Колонка 2 · ask"],
+  ["c3chip", "Колонка 3 · чип"],
+  ["c3title", "Колонка 3 · заголовок"],
+  ["c3list", "Колонка 3 · список (по строке)", "area"],
+  ["c3ask", "Колонка 3 · ask"],
+  ["hoursTitle", "Демо · заголовок"],
+  ["hoursWhen", "Слоты"],
+  ["hoursLegal", "Контакт / юрлицо"],
+  ["qr1cap", "Подпись QR 1"],
+  ["qr2cap", "Подпись QR 2"]
+];
+
+const KEY = "healsens-a5-websummit-2026";
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    return { ...DEFAULTS, ...(saved || {}) };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+let state = load();
+
+function qrDataUrl(data) {
+  const qr = qrcode(0, "M");
+  qr.addData(data);
+  qr.make();
+  return qr.createDataURL(8, 2);
+}
+
+function fillList(id, text) {
+  const ul = document.getElementById(id);
+  ul.innerHTML = "";
+  text.split("\n").map(s => s.trim()).filter(Boolean).forEach(line => {
+    const li = document.createElement("li");
+    li.textContent = line;
+    ul.appendChild(li);
+  });
+}
+
+function render() {
+  document.querySelectorAll("[data-k]").forEach(el => {
+    el.textContent = state[el.dataset.k] || "";
+  });
+  fillList("ul-c1", state.c1list);
+  fillList("ul-c2", state.c2list);
+  fillList("ul-c3", state.c3list);
+  document.getElementById("qrFront").src = qrDataUrl(state.qrFront);
+  document.getElementById("qrIntel").src = qrDataUrl(state.qrIntel);
+  document.getElementById("qrAbout").src = qrDataUrl(state.qrAbout);
+}
+
+function buildForm() {
+  const root = document.getElementById("form");
+  root.innerHTML = "";
+  const intro = document.createElement("div");
+  intro.className = "note";
+  intro.textContent = "Типография берёт PDF, не PNG и не Word. После печати сделай пробный скан QR телефоном.";
+  root.appendChild(intro);
+
+  FIELDS.forEach(([key, label, kind]) => {
+    if (!label) {
+      const h = document.createElement("h2");
+      h.textContent = key;
+      root.appendChild(h);
+      return;
+    }
+    const lab = document.createElement("label");
+    lab.textContent = label;
+    lab.setAttribute("for", key);
+    root.appendChild(lab);
+    const el = document.createElement(kind === "area" || kind === "tall" ? "textarea" : "input");
+    el.id = "f-" + key;
+    if (kind === "url") el.type = "url";
+    if (kind === "tall") el.className = "tall";
+    el.value = state[key] || "";
+    el.addEventListener("input", () => {
+      state[key] = el.value;
+      localStorage.setItem(KEY, JSON.stringify(state));
+      render();
+    });
+    root.appendChild(el);
+  });
+}
+
+document.getElementById("printBtn").addEventListener("click", () => window.print());
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Вернуть исходные тексты?")) return;
+  localStorage.removeItem(KEY);
+  state = { ...DEFAULTS };
+  buildForm();
+  render();
+});
+
+buildForm();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Healsens — файлы для печати Web Summit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: #F7F6F5;
+      color: #040517;
+    }
+    header {
+      background: #040517;
+      color: #EEF1F7;
+      padding: 22px 20px 20px;
+    }
+    header img { height: 28px; }
+    header p { margin: 10px 0 0; color: #A6ADBD; font-size: 14px; line-height: 1.4; max-width: 40em; }
+    main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 28px; letter-spacing: -0.04em; margin: 0 0 8px; }
+    .lead { color: #4D5468; margin: 0 0 22px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+    a.btn {
+      display: inline-block;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 16px;
+    }
+    a.primary { background: #040517; color: #7CFC00; }
+    a.secondary { background: #fff; color: #040517; border: 1px solid #D0CCC6; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } }
+    figure {
+      margin: 0;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(4,5,23,0.04), 0 8px 24px rgba(4,5,23,0.06);
+    }
+    figure img { width: 100%; height: auto; border-radius: 8px; display: block; }
+    figcaption { margin-top: 10px; font-size: 13px; color: #4D5468; font-weight: 600; }
+    .note {
+      margin-top: 28px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px 18px;
+      color: #4D5468;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="assets/logo-combo.png" alt="Healsens" />
+    <p>Web Summit 2026 · Pavilion 1 · E150. Скачай PDF и отдай в типографию. Тексты и QR можно поменять в редакторе.</p>
+  </header>
+  <main>
+    <h1>Файлы для печати</h1>
+    <p class="lead">Это не вложения из чата — кнопки ниже скачивают готовые PDF на твой компьютер или телефон.</p>
+    <div class="actions">
+      <a class="btn primary" href="a5-two-sides.pdf" download="healsens-A5-web-summit.pdf">Скачать A5 PDF (две стороны)</a>
+      <a class="btn secondary" href="table-tent.pdf" download="healsens-table-tent.pdf">Скачать table tent PDF</a>
+      <a class="btn secondary" href="editor.html">Редактировать тексты и QR</a>
+    </div>
+    <div class="pair">
+      <figure>
+        <img src="a5-front.png" alt="A5 лицевая" />
+        <figcaption>Лицевая · <a href="a5-front.pdf" download>a5-front.pdf</a></figcaption>
+      </figure>
+      <figure>
+        <img src="a5-back.png" alt="A5 оборот" />
+        <figcaption>Оборот · <a href="a5-back.pdf" download>a5-back.pdf</a></figcaption>
+      </figure>
+    </div>
+    <div class="note">
+      Типографии: A5, двусторонняя печать, переворот по длинной стороне, бумага 170–250 г/м², мат или silk, тираж 80–120.
+      Перед тиражом — один пробник и сканирование QR телефоном.
+    </div>
+  </main>
+</body>
+</html>
